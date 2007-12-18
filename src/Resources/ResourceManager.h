@@ -13,6 +13,7 @@
 #include <Resources/ITextureResource.h>
 #include <Resources/IModelResource.h>
 #include <Resources/IShaderResource.h>
+#include <Resources/IScriptResource.h>
 #include <string>
 #include <map>
 #include <vector>
@@ -43,6 +44,9 @@ private:
     static vector<IShaderResourcePlugin*>   shaderPlugins;
     static map<string, IShaderResourcePtr>  shaders;
 
+	static vector<IScriptResourcePlugin*>   scriptPlugins;
+	static vector<IScriptModule*>           scriptModules;
+
 public:
     static void AppendPath(string);
     static void PrependPath(string);
@@ -52,10 +56,15 @@ public:
     static void AddTexturePlugin(ITextureResourcePlugin* plugin);
     static void AddModelPlugin(IModelResourcePlugin* plugin);
     static void AddShaderPlugin(IShaderResourcePlugin* plugin);
+	static void AddScriptPlugin(IScriptResourcePlugin* plugin);
+	static void AddScriptModule(IScriptModule* module);
 
 	static ITextureResourcePtr CreateTexture(const string filename);
 	static IModelResourcePtr   CreateModel(const string filename);
     static IShaderResourcePtr  CreateShader(const string filename);
+	static IScriptResourcePtr CreateScript(const string language);
+	static vector<IScriptModule*> GetScriptModules(const string language);
+
 	static void Shutdown();
 };
 

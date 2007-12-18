@@ -29,12 +29,16 @@ list<string> ResourceManager::paths = list<string>();
 map<string, string> ResourceManager::pathcache = map<string, string>();
 
 map<string, ITextureResourcePtr> ResourceManager::textures = map<string, ITextureResourcePtr>();
-map<string, IModelResourcePtr>   ResourceManager::models   = map<string, IModelResourcePtr>();
-map<string, IShaderResourcePtr>  ResourceManager::shaders  = map<string, IShaderResourcePtr>();
-
 vector<ITextureResourcePlugin*>  ResourceManager::texturePlugins = vector<ITextureResourcePlugin*>();
+
+map<string, IModelResourcePtr>   ResourceManager::models   = map<string, IModelResourcePtr>();
 vector<IModelResourcePlugin*>	 ResourceManager::modelPlugins	 = vector<IModelResourcePlugin*>();
+
+map<string, IShaderResourcePtr>  ResourceManager::shaders  = map<string, IShaderResourcePtr>();
 vector<IShaderResourcePlugin*>	 ResourceManager::shaderPlugins	 = vector<IShaderResourcePlugin*>();
+
+vector<IScriptResourcePlugin*>   ResourceManager::scriptPlugins = vector<IScriptResourcePlugin*>();
+vector<IScriptModule*>           ResourceManager::scriptModules = vector<IScriptModule*>();
 
 /** 
  * Append given path to the global path list
@@ -86,7 +90,6 @@ string ResourceManager::FindFileInPath(string file) {
 
 	// file not found in cache, looking it up!
 	list<string> possibles;
-	
 	for (list<string>::iterator itr = paths.begin(); itr != paths.end(); itr++) {
 		string p = (*itr) + file;
 		if (fs::exists(p)) {
@@ -124,7 +127,7 @@ void ResourceManager::AddTexturePlugin(ITextureResourcePlugin* plugin) {
  * @param plugin Model plug-in
  */
 void ResourceManager::AddModelPlugin(IModelResourcePlugin* plugin) {
-		modelPlugins.push_back(plugin);
+	modelPlugins.push_back(plugin);
 }
 
 /**
@@ -133,8 +136,29 @@ void ResourceManager::AddModelPlugin(IModelResourcePlugin* plugin) {
  * @param plugin Shader plug-in
  */
 void ResourceManager::AddShaderPlugin(IShaderResourcePlugin* plugin) {
-		shaderPlugins.push_back(plugin);
+	shaderPlugins.push_back(plugin);
 }
+
+
+/** 
+ * Add scripting resource plugin
+ * 
+ * @param plugin Scripting plugin
+ */
+void ResourceManager::AddScriptPlugin(IScriptResourcePlugin* plugin) {
+	scriptPlugins.push_back(plugin);
+}
+
+
+/** 
+ * Add module to interpreter
+ * 
+ * @param module Script module
+ */
+void ResourceManager::AddScriptModule(IScriptModule* module) {
+	scriptModules.push_back(module);
+}
+
 
 /**
  * Create a texture resource object.
@@ -238,14 +262,68 @@ IShaderResourcePtr ResourceManager::CreateShader(const string filename) {
     throw ResourceException("Unsupported shader format: " + filename);
 }
 
+/** 
+ * Create a scripting resource object
+ * 
+ * @param language The language of the interpreter 
+ * @return Scripting resource
+ * @throws ResourceException if the scripting language is not supported by a plugin
+ */
+IScriptResourcePtr ResourceManager::CreateScript(const string language) {
+
+	// lookup the plugin that accepts this language
+	vector<IScriptResourcePlugin*>::iterator plugin;
+	for (plugin = scriptPlugins.begin(); plugin != scriptPlugins.end(); plugin++) {
+		if ((*plugin)->RunsLanguage(language)) {
+			break;
+		}
+	}
+	
+	// If we did find a plugin, we lookup the interpreter for this language
+	if (plugin != scriptPlugins.end()) {
+		
+		// returns the scripting resource with the matching interpreter inside
+		return (*plugin)->CreateResource();
+
+	} else {
+		logger.warning << "Plugin for scripting language " << language << " not found." << logger.end;
+	}
+
+	throw ResourceException("Unsupported scripting language: " + language);
+}
+
+
+vector<IScriptModule*> ResourceManager::GetScriptModules(const string language) {
+
+	vector<IScriptModule*> modules;
+
+	vector<IScriptModule*>::iterator md;
+	for (md = scriptModules.begin(); md != scriptModules.end(); md++) {
+		if ((*md)->RunsLanguage(language)) {
+			modules.push_back((*md));
+		}
+	}
+
+	return modules;
+}
+
+
 /**
  * Shutdown the resource manager.
  * Flushes the resource object lists.
  */
 void ResourceManager::Shutdown() {
     textures.clear();
+	texturePlugins.clear();
+
     models.clear();
+	modelPlugins.clear();
+
     shaders.clear();
+	shaderPlugins.clear();
+
+	scriptPlugins.clear();
+	scriptModules.clear();
 }
 
 } // NS Resources
